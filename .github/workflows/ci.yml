@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: unit, document and CLI tests
+        run: npm test
+      - name: the examples are caught, the plain file is not
+        shell: bash
+        run: |
+          node examples/make_samples.js
+          node bin/unseen.js examples --no-color && exit 1 || test $? -eq 1   # exit 1 = findings, as expected
+          node bin/unseen.js examples/plain.md --no-color --fail-on low
+      - name: unseen's own source has nothing hidden in it
+        run: node bin/unseen.js src web bin index.html README.md --no-color --fail-on medium

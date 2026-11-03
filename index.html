@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- connect-src 'none': the browser itself guarantees this page cannot send what you paste anywhere -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>unseen</title>
+  <meta name="description" content="See what AI models read but you can't: invisible characters, smuggled messages, hidden prompts. Then strip them. Runs in your browser.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2307050c'/%3E%3Cpath d='M4 16s4.5-7 12-7 12 7 12 7-4.5 7-12 7S4 16 4 16z' fill='none' stroke='%23ff4fd8' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='%23ff4fd8'/%3E%3Cpath d='M6 26L26 6' stroke='%2307050c' stroke-width='5'/%3E%3Cpath d='M6 26L26 6' stroke='%23ff4fd8' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="web/style.css">
+  <script type="module" src="web/app.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div>
+        <h1 class="brand">un<span class="zw" title="U+200B ZERO WIDTH SPACE: you would never have seen it">ZWSP</span>seen</h1>
+        <p class="tagline">See what AI models read but you can't: invisible characters, smuggled messages, hidden prompts. Then strip them.</p>
+      </div>
+      <a class="badge" href="https://github.com/njuj/unseen"><span class="dot"></span>runs 100% in your browser</a>
+    </header>
+
+    <main>
+      <section class="panel" id="input-panel" aria-labelledby="input-title">
+        <div class="panel-head">
+          <span class="panel-title" id="input-title">input</span>
+          <div class="tools">
+            <select id="sample" aria-label="Load a sample">
+              <option value="">load a sample…</option>
+            </select>
+            <button type="button" id="open">open file</button>
+            <input type="file" id="file" hidden
+                   accept=".txt,.md,.markdown,.html,.htm,.eml,.xml,.svg,.docx,.json,.csv,.js,.mjs,.ts,.py,.go,.rs,.java,.c,.cpp,.cs,.php,.rb,.sh,.ps1,.yml,.yaml">
+            <button type="button" id="clear">clear</button>
+          </div>
+        </div>
+        <div class="docbar" id="docbar" hidden>
+          <span><b id="docname"></b> · Word document, text shown read-only</span>
+          <button type="button" class="ghost" id="doc-close" aria-label="Close the document">close</button>
+        </div>
+        <textarea id="input" spellcheck="false" autocomplete="off" aria-label="Text to inspect"
+                  placeholder="Paste anything: a chatbot answer, an e-mail, a web page's HTML, a README, code…&#10;&#10;…or drop a .txt / .md / .html / .docx file here."></textarea>
+        <div class="opts">
+          <label>read as
+            <select id="kind" aria-label="How to read the input">
+              <option value="auto">auto</option>
+              <option value="text">text</option>
+              <option value="markdown">markdown</option>
+              <option value="html">html</option>
+              <option value="code">code</option>
+            </select>
+          </label>
+          <label><input type="checkbox" id="opt-strip" checked> drop hidden HTML</label>
+          <label><input type="checkbox" id="opt-homoglyphs"> fix lookalike letters</label>
+          <label title="also remove characters doing a real job: emoji joiners, Persian/Indic joiners, a leading BOM"><input type="checkbox" id="opt-strict"> strict</label>
+        </div>
+      </section>
+
+      <section class="panel" id="out-panel" aria-label="Results">
+        <div class="panel-head">
+          <div class="tabs" role="tablist" aria-label="Views">
+            <button type="button" role="tab" id="tab-btn-findings" aria-controls="tab-findings" aria-selected="true" data-tab="findings">findings <span class="n" id="n-findings"></span></button>
+            <button type="button" role="tab" id="tab-btn-reveal" aria-controls="tab-reveal" aria-selected="false" data-tab="reveal">revealed</button>
+            <button type="button" role="tab" id="tab-btn-clean" aria-controls="tab-clean" aria-selected="false" data-tab="clean">clean</button>
+          </div>
+          <span class="stats" id="stats" aria-live="polite"></span>
+        </div>
+        <div class="verdict" id="verdict" hidden></div>
+        <div class="tab" id="tab-findings" role="tabpanel" aria-labelledby="tab-btn-findings"></div>
+        <div class="tab" id="tab-reveal" role="tabpanel" aria-labelledby="tab-btn-reveal" hidden>
+          <p class="legend"><span class="inv">ZWSP</span> hidden and suspicious <span class="inv ok">ZWJ</span> doing a real job (emoji, Persian, Hindi…) · every invisible character is shown where it sits, bidi controls no longer reorder anything</p>
+          <pre class="revealed" id="revealed"></pre>
+        </div>
+        <div class="tab" id="tab-clean" role="tabpanel" aria-labelledby="tab-btn-clean" hidden>
+          <div class="clean-head">
+            <span id="clean-summary"></span>
+            <div class="tools">
+              <button type="button" id="dl-clean">download</button>
+              <button type="button" class="primary" id="copy-clean" data-label="copy clean text">copy clean text</button>
+            </div>
+          </div>
+          <pre class="cleaned" id="cleaned"></pre>
+        </div>
+        <div class="empty" id="empty">
+          <strong>Nothing to look at yet.</strong>
+          Paste text on the left, drop a file, or load a sample.
+        </div>
+      </section>
+    </main>
+
+    <section class="catalog" aria-label="What unseen finds">
+      <div><h2>Invisible characters</h2><p>Zero-width spaces, the narrow no-break space (U+202F) reported in chatbot output, soft hyphens, fillers. Joiners that do a real job in emoji, Persian or Hindi are left alone.</p></div>
+      <div><h2>Smuggled messages</h2><p>Text hidden in Unicode tag characters, in variation selectors after an emoji, or in zero-width binary. Decoded and shown, and critical when it is an instruction.</p></div>
+      <div><h2>Hidden prompts</h2><p>White-on-white or 1px text, <code>display:none</code>, comments and alt text in pages, Markdown and Word files that talk to a model instead of a reader.</p></div>
+      <div><h2>Trojan Source</h2><p>Bidirectional controls that make code read differently from how it runs (CVE-2021-42574), and the right-to-left override in file names.</p></div>
+      <div><h2>Lookalike letters</h2><p>A Cyrillic <i>а</i> in p<i>а</i>ypal.com, mixed-script identifiers, 𝐬𝐭𝐲𝐥𝐞𝐝 letters that slip past filters. Real Russian or Greek text is not reported.</p></div>
+      <div class="limit"><h2>What it cannot do</h2><p>Statistical watermarks such as SynthID live in which words a model chose, not in characters. No character cleaner can see or remove them, and unseen does not pretend to.</p></div>
+    </section>
+
+    <p class="privacy">
+      <span aria-hidden="true">🔒</span>
+      <span>Nothing you paste or open leaves this tab. The page ships a Content-Security-Policy with
+      <code>connect-src 'none'</code>, so the browser blocks every network request this code could make.
+      The same engine runs as a command-line tool: <code>npx github:njuj/unseen scan .</code></span>
+    </p>
+
+    <footer>built by <a href="https://github.com/njuj">kira</a> · <a href="https://github.com/njuj/unseen">source</a> · MIT · <span id="version"></span></footer>
+  </div>
+</body>
+</html>
